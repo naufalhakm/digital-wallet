@@ -10,10 +10,11 @@ import (
 )
 
 type RouteConfig struct {
-	App            *gin.Engine
-	AuthHandler    handler.AuthHandler
-	WalletHandler  handler.WalletHandler
-	AuthMiddleware *middleware.AuthMiddleware
+	App              *gin.Engine
+	AuthHandler      handler.AuthHandler
+	WalletHandler    handler.WalletHandler
+	AuthMiddleware   *middleware.AuthMiddleware
+	LoggerMiddleware gin.HandlerFunc
 }
 
 func (c *RouteConfig) SetupRoute() {
@@ -24,6 +25,8 @@ func (c *RouteConfig) SetupRoute() {
 			"service":   "digital-wallet-api",
 		})
 	})
+
+	c.App.Use(c.LoggerMiddleware)
 
 	v1 := c.App.Group("/api/v1")
 	{

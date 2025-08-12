@@ -40,12 +40,14 @@ func Bootstrap(config *BootstrapConfig) {
 
 	// setup middleware
 	authMiddleware := middleware.NewAuthMiddleware(config.JWTConfig.SecretKey, config.Log, jwtManager)
+	LoggerMiddleware := middleware.LoggerMiddleware(config.Log)
 
 	routeConfig := router.RouteConfig{
-		App:            config.App,
-		WalletHandler:  walletHandler,
-		AuthHandler:    authHandler,
-		AuthMiddleware: authMiddleware,
+		App:              config.App,
+		WalletHandler:    walletHandler,
+		AuthHandler:      authHandler,
+		AuthMiddleware:   authMiddleware,
+		LoggerMiddleware: LoggerMiddleware,
 	}
 	routeConfig.SetupRoute()
 }
