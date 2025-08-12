@@ -56,7 +56,6 @@ func main() {
 		MaxHeaderBytes: 1 << 20,
 	}
 
-	// Start server in a goroutine
 	go func() {
 		appLogger.WithField("port", cfg.Server.Port).Info("Starting HTTP server")
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
@@ -64,14 +63,12 @@ func main() {
 		}
 	}()
 
-	// Wait for interrupt signal to gracefully shutdown the server
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
 
 	appLogger.Info("Shutting down server...")
 
-	// Graceful shutdown with timeout
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 

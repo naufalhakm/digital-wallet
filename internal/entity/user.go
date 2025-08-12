@@ -15,7 +15,6 @@ type User struct {
 	CreatedAt time.Time `json:"created_at" db:"created_at"`
 	UpdatedAt time.Time `json:"updated_at" db:"updated_at"`
 
-	// Relationship
 	Wallets []Wallet `json:"wallets,omitempty" db:"foreignKey:UserID"`
 }
 
