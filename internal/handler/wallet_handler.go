@@ -17,6 +17,7 @@ type WalletHandler interface {
 	CreateWallet(c *gin.Context)
 	GetBalance(c *gin.Context)
 	Withdraw(c *gin.Context)
+	Deposit(c *gin.Context)
 	GetTransactionHistory(c *gin.Context)
 }
 
@@ -150,6 +151,46 @@ func (h *WalletHandlerImpl) Withdraw(c *gin.Context) {
 	}
 
 	resp := response.GeneralSuccessCustomMessageAndPayload("Withdrawal completed successfully", withdrawResp)
+	c.JSON(resp.StatusCode, resp)
+}
+
+func (h *WalletHandlerImpl) Deposit(c *gin.Context) {
+	userID, ok := h.getUserIDFromContext(c)
+	if !ok {
+		return
+	}
+
+	var req params.DepositRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		h.logger.WithError(err).Error("Invalid request payload for deposit")
+		c.JSON(http.StatusBadRequest, gin.H{
+			"status":  false,
+			"message": "Invalid request payload",
+		})
+		return
+	}
+
+	if err := h.validator.Struct(&req); err != nil {
+		details := make(map[string]string)
+		for _, err := range err.(validator.ValidationErrors) {
+			details[err.Field()] = "Validation error on this field"
+		}
+
+		c.JSON(http.StatusBadRequest, gin.H{
+			"status":  false,
+			"message": "Validation failed",
+			"errors":  details,
+		})
+		return
+	}
+
+	depositResp, custErr := h.usecase.Deposit(c.Request.Context(), userID, &req)
+	if custErr != nil {
+		c.JSON(custErr.StatusCode, custErr)
+		return
+	}
+
+	resp := response.GeneralSuccessCustomMessageAndPayload("Deposit completed successfully", depositResp)
 	c.JSON(resp.StatusCode, resp)
 }
 

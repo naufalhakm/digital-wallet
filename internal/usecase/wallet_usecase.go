@@ -23,6 +23,7 @@ type WalletUsecase interface {
 	CreateWallet(ctx context.Context, req *params.CreateWalletRequest) (*params.WalletResponse, *response.CustomError)
 	GetBalance(ctx context.Context, userID uuid.UUID) (*params.BalanceResponse, *response.CustomError)
 	Withdraw(ctx context.Context, userID uuid.UUID, req *params.WithdrawRequest) (*params.WithdrawResponse, *response.CustomError)
+	Deposit(ctx context.Context, userID uuid.UUID, req *params.DepositRequest) (*params.DepositResponse, *response.CustomError)
 	GetTransactionHistory(ctx context.Context, userID uuid.UUID, limit, offset int) (*params.TransactionHistoryResponse, *response.CustomError)
 }
 
@@ -177,6 +178,88 @@ func (u *WalletUsecaseImpl) Withdraw(ctx context.Context, userID uuid.UUID, req 
 	}).Info("Withdrawal completed successfully")
 
 	return &params.WithdrawResponse{
+		TransactionID: transaction.ID,
+		Amount:        req.Amount,
+		NewBalance:    newBalance,
+		Status:        transaction.Status,
+		Timestamp:     transaction.UpdatedAt,
+	}, nil
+}
+
+func (u *WalletUsecaseImpl) Deposit(ctx context.Context, userID uuid.UUID, req *params.DepositRequest) (*params.DepositResponse, *response.CustomError) {
+	if req.Amount <= 0 {
+		return nil, response.BadRequestError("invalid deposit amount")
+	}
+
+	tx := u.repo.BeginTx(ctx)
+	if tx.Error != nil {
+		u.logger.WithError(tx.Error).Error("Failed to begin transaction")
+		return nil, response.GeneralError("failed to begin transaction")
+	}
+	txRepo := u.repo.WithTx(tx)
+	defer tx.Rollback()
+
+	wallet, err := txRepo.GetByUserIDForUpdate(ctx, tx, userID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, response.NotFoundError("wallet not found")
+		}
+		u.logger.WithError(err).WithField("user_id", userID).Error("Failed to get wallet for update")
+		return nil, response.RepositoryError("failed to get wallet for update")
+	}
+
+	newBalance := wallet.Balance + req.Amount
+	newVersion := wallet.Version + 1
+
+	transaction := &entity.Transaction{
+		ID:          uuid.New(),
+		WalletID:    wallet.ID,
+		Type:        entity.TransactionTypeDeposit,
+		Amount:      req.Amount,
+		Status:      entity.TransactionStatusPending,
+		Description: req.Description,
+		CreatedAt:   time.Now(),
+		UpdatedAt:   time.Now(),
+	}
+
+	if err := txRepo.CreateTransaction(ctx, tx, transaction); err != nil {
+		u.logger.WithError(err).Error("Failed to create transaction")
+		return nil, response.RepositoryError("failed to create transaction")
+	}
+
+	if err := txRepo.UpdateBalance(ctx, tx, wallet.ID, newBalance, newVersion); err != nil {
+		u.logger.WithError(err).Error("Failed to update wallet balance")
+		return nil, response.RepositoryError("failed to update wallet balance")
+	}
+
+	transaction.Status = entity.TransactionStatusCompleted
+	if err := txRepo.UpdateTransactionStatus(ctx, tx, transaction.ID, transaction); err != nil {
+		u.logger.WithError(err).Error("Failed to update transaction status")
+		return nil, response.RepositoryError("failed to update transaction status")
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		u.logger.WithError(err).Error("Failed to commit transaction")
+		return nil, response.RepositoryError("failed to commit transaction")
+	}
+
+	cachePattern := fmt.Sprintf("transactions:%s:*", userID.String())
+	if keys, err := u.cache.Keys(ctx, cachePattern).Result(); err == nil {
+		if len(keys) > 0 {
+			if err := u.cache.Del(ctx, keys...).Err(); err != nil {
+				u.logger.WithError(err).Warn("Failed to invalidate transaction cache")
+			}
+		}
+	}
+
+	u.logger.WithFields(logrus.Fields{
+		"user_id":        userID,
+		"transaction_id": transaction.ID,
+		"amount":         req.Amount,
+		"new_balance":    newBalance,
+	}).Info("Deposit completed successfully")
+
+	return &params.DepositResponse{
 		TransactionID: transaction.ID,
 		Amount:        req.Amount,
 		NewBalance:    newBalance,

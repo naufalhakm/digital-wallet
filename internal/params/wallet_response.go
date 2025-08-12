@@ -22,6 +22,14 @@ type WithdrawResponse struct {
 	Timestamp     time.Time                `json:"timestamp"`
 }
 
+type DepositResponse struct {
+	TransactionID uuid.UUID                `json:"transaction_id"`
+	Amount        float64                  `json:"amount"`
+	NewBalance    float64                  `json:"new_balance"`
+	Status        entity.TransactionStatus `json:"status"`
+	Timestamp     time.Time                `json:"timestamp"`
+}
+
 type WalletResponse struct {
 	ID        uuid.UUID `json:"id"`
 	UserID    uuid.UUID `json:"user_id"`

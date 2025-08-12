@@ -41,6 +41,7 @@ func (c *RouteConfig) SetupRoute() {
 				protected.POST("/", c.WalletHandler.CreateWallet)
 				protected.GET("/balance", c.WalletHandler.GetBalance)
 				protected.POST("/withdraw", c.WalletHandler.Withdraw)
+				protected.POST("/deposit", c.WalletHandler.Deposit)
 				protected.GET("/transactions", c.WalletHandler.GetTransactionHistory)
 			}
 		}
