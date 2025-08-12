@@ -42,12 +42,12 @@ type JWTConfig struct {
 func LoadConfig() *Config {
 	return &Config{
 		Server: ServerConfig{
-			Port:         getEnv("SERVER_PORT", "8080"),
+			Port:         getEnv("APP_PORT", "8080"),
 			ReadTimeout:  getEnvInt("SERVER_READ_TIMEOUT", 30),
 			WriteTimeout: getEnvInt("SERVER_WRITE_TIMEOUT", 30),
 		},
 		Database: DatabaseConfig{
-			Host:     getEnv("DB_HOST", "localhost"),
+			Host:     getEnv("DB_HOST", "db"),
 			Port:     getEnv("DB_PORT", "5432"),
 			User:     getEnv("DB_USER", "postgres"),
 			Password: getEnv("DB_PASSWORD", "password"),
@@ -59,7 +59,7 @@ func LoadConfig() *Config {
 			ExpirationTime: getEnvInt("JWT_EXPIRY", 24),
 		},
 		Redis: RedisConfig{
-			Host:     getEnv("REDIS_HOST", "localhost"),
+			Host:     getEnv("REDIS_HOST", "redis"),
 			Port:     getEnv("REDIS_PORT", "6379"),
 			Password: getEnv("REDIS_PASSWORD", ""),
 			DB:       getEnvInt("REDIS_DB", 0),
