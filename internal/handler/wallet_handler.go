@@ -202,7 +202,7 @@ func (h *WalletHandlerImpl) GetTransactionHistory(c *gin.Context) {
 
 	// Parse pagination parameters
 	limitStr := c.DefaultQuery("limit", "10")
-	offsetStr := c.DefaultQuery("offset", "0")
+	pageStr := c.DefaultQuery("page", "1")
 
 	limit, err := strconv.Atoi(limitStr)
 	if err != nil || limit <= 0 {
@@ -212,10 +212,12 @@ func (h *WalletHandlerImpl) GetTransactionHistory(c *gin.Context) {
 		limit = 100
 	}
 
-	offset, err := strconv.Atoi(offsetStr)
-	if err != nil || offset < 0 {
-		offset = 0
+	page, err := strconv.Atoi(pageStr)
+	if err != nil || page <= 0 {
+		page = 1
 	}
+
+	offset := (page - 1) * limit
 
 	transactions, custErr := h.usecase.GetTransactionHistory(c.Request.Context(), userID, limit, offset)
 	if custErr != nil {

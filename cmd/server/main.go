@@ -43,6 +43,7 @@ func main() {
 	config.Bootstrap(&config.BootstrapConfig{
 		DB:        db,
 		App:       router,
+		Redis:     redisClient,
 		Log:       appLogger,
 		Validate:  validator,
 		JWTConfig: &cfg.JWT,
